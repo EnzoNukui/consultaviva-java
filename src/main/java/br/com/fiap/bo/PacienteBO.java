@@ -38,6 +38,16 @@ public class PacienteBO {
         if (!cadastroValido(paciente)) {
             return null;
         }
+        String email = paciente.getEmail();
+        if (email != null && !email.isBlank()) {
+            email = email.trim();
+            if (pacienteDAO.emailEmUso(email)) {
+                return null;
+            }
+        } else {
+            email = null;
+        }
+        paciente.setEmail(email);
         return pacienteDAO.inserir(paciente);
     }
 
@@ -58,6 +68,21 @@ public class PacienteBO {
     public PacienteTO atualizar(PacienteTO paciente) {
         if (!cadastroValido(paciente) || paciente.getIdPaciente() == null || paciente.getIdPaciente() <= 0) {
             return null;
+        }
+        PacienteTO atual = pacienteDAO.buscarPorId(paciente.getIdPaciente());
+        if (atual == null) {
+            return null;
+        }
+
+        String emailInformado = paciente.getEmail();
+        if (emailInformado == null || emailInformado.isBlank()) {
+            paciente.setEmail(atual.getEmail());
+        } else {
+            emailInformado = emailInformado.trim();
+            if (pacienteDAO.emailEmUso(emailInformado, paciente.getIdPaciente())) {
+                return null;
+            }
+            paciente.setEmail(emailInformado);
         }
         return pacienteDAO.atualizar(paciente);
     }

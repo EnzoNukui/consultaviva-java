@@ -13,20 +13,30 @@ import java.util.ArrayList;
 public class PacienteDAO {
 
     public boolean emailEmUso(String email) {
+        return emailEmUso(email, null);
+    }
+
+    public boolean emailEmUso(String email, Long idPacienteIgnorar) {
         Connection conexao = ConnectionFactory.getConnection();
         if (conexao == null) {
             return true;
         }
-        String sql = "select (select count(*) from tb_paciente where upper(DS_EMAIL) = upper(?)) + "
+        String filtroPaciente = idPacienteIgnorar == null ? "" : " and CD_PACIENTE <> ?";
+        String sql = "select (select count(*) from tb_paciente where upper(DS_EMAIL) = upper(?)"
+                + filtroPaciente + ") + "
                 + "(select count(*) from tb_membro_equipe where upper(DS_EMAIL) = upper(?)) from dual";
         try (PreparedStatement ps = conexao.prepareStatement(sql)) {
-            ps.setString(1, email.trim());
-            ps.setString(2, email.trim());
+            int indice = 1;
+            ps.setString(indice++, email.trim());
+            if (idPacienteIgnorar != null) {
+                ps.setLong(indice++, idPacienteIgnorar);
+            }
+            ps.setString(indice, email.trim());
             try (ResultSet rs = ps.executeQuery()) {
                 return rs.next() && rs.getLong(1) > 0;
             }
         } catch (SQLException e) {
-            System.out.println("Erro ao verificar e-mail de cadastro: " + e.getMessage());
+            System.out.println("Erro ao verificar uso do e-mail: " + e.getMessage());
             return true;
         } finally {
             ConnectionFactory.closeConnection();
@@ -84,6 +94,7 @@ public class PacienteDAO {
                 Date dataNascimento = rs.getDate("DT_NASCIMENTO");
                 paciente.setDataNascimento(dataNascimento == null ? null : dataNascimento.toLocalDate());
                 paciente.setTelefone(rs.getString("NR_TELEFONE"));
+                paciente.setEmail(rs.getString("DS_EMAIL"));
                 registros.add(paciente);
             }
         } catch (SQLException e) {
@@ -111,6 +122,7 @@ public class PacienteDAO {
                     Date dataNascimento = rs.getDate("DT_NASCIMENTO");
                     paciente.setDataNascimento(dataNascimento == null ? null : dataNascimento.toLocalDate());
                     paciente.setTelefone(rs.getString("NR_TELEFONE"));
+                    paciente.setEmail(rs.getString("DS_EMAIL"));
                     return paciente;
                 }
             }
@@ -127,12 +139,14 @@ public class PacienteDAO {
         if (conexao == null) {
             return null;
         }
-        String sql = "insert into tb_paciente (NM_PACIENTE, DT_NASCIMENTO, NR_TELEFONE) values (?, ?, ?)";
+        String sql = "insert into tb_paciente (NM_PACIENTE, DT_NASCIMENTO, NR_TELEFONE, DS_EMAIL) "
+                + "values (?, ?, ?, ?)";
         // A coluna identity é omitida do INSERT e solicitada explicitamente ao driver Oracle.
         try (PreparedStatement ps = conexao.prepareStatement(sql, new String[]{"CD_PACIENTE"})) {
             ps.setString(1, paciente.getNomePaciente());
             ps.setDate(2, paciente.getDataNascimento() == null ? null : Date.valueOf(paciente.getDataNascimento()));
             ps.setString(3, paciente.getTelefone());
+            ps.setString(4, paciente.getEmail());
             if (ps.executeUpdate() == 0) {
                 return null;
             }
@@ -162,13 +176,14 @@ public class PacienteDAO {
         if (conexao == null) {
             return null;
         }
-        String sql = "update tb_paciente set NM_PACIENTE = ?, DT_NASCIMENTO = ?, NR_TELEFONE = ? where "
-                + "CD_PACIENTE = ?";
+        String sql = "update tb_paciente set NM_PACIENTE = ?, DT_NASCIMENTO = ?, NR_TELEFONE = ?, DS_EMAIL = ? "
+                + "where CD_PACIENTE = ?";
         try (PreparedStatement ps = conexao.prepareStatement(sql)) {
             ps.setString(1, paciente.getNomePaciente());
             ps.setDate(2, paciente.getDataNascimento() == null ? null : Date.valueOf(paciente.getDataNascimento()));
             ps.setString(3, paciente.getTelefone());
-            ps.setLong(4, paciente.getIdPaciente());
+            ps.setString(4, paciente.getEmail());
+            ps.setLong(5, paciente.getIdPaciente());
             return ps.executeUpdate() > 0 ? paciente : null;
         } catch (SQLException e) {
             System.out.println("Erro ao atualizar paciente: " + e.getMessage());
