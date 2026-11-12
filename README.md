@@ -205,6 +205,7 @@ Os caminhos abaixo são relativos ao endereço base. **Ambos** indica que a rota
 | Método | Caminho | Acesso | Operação |
 | --- | --- | --- | --- |
 | GET | `/agendamentos` | Equipe | Lista agendamentos. |
+| GET | `/agendamentos/paciente` | Paciente | Lista todos os agendamentos do paciente autenticado. Retorna `[]` quando não há registros. |
 | GET | `/agendamentos/{idAgendamento}` | Equipe | Consulta um agendamento. |
 | GET | `/agendamentos/{idAgendamento}/paciente` | Paciente | Consulta um agendamento próprio. |
 | POST | `/agendamentos` | Equipe | Agenda um atendimento para um paciente. |
@@ -215,6 +216,8 @@ Os caminhos abaixo são relativos ao endereço base. **Ambos** indica que a rota
 | POST | `/agendamentos/{idAgendamento}/cancelamento-paciente` | Paciente | Cancela um agendamento próprio. |
 | POST | `/agendamentos/{idAgendamento}/realizacao` | Equipe | Registra que o atendimento foi realizado. |
 | POST | `/agendamentos/{idAgendamento}/falta` | Equipe | Registra a falta do paciente. |
+
+Para montar a lista de próximas consultas, use `GET /agendamentos/paciente` e consulte a data e a hora de cada registro `AGENDADO` com `GET /horarios-atendimento/{idHorario}`. O `idHorario` vem na resposta da listagem.
 
 ### Solicitações de ajuda
 

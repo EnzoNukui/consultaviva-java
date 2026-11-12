@@ -1,6 +1,7 @@
 package br.com.fiap.resource;
 
 import br.com.fiap.bo.AgendamentoBO;
+import br.com.fiap.bo.PacienteBO;
 import br.com.fiap.exception.AcessoNegadoException;
 import br.com.fiap.to.AgendamentoTO;
 import jakarta.validation.Valid;
@@ -23,6 +24,7 @@ import java.util.List;
 @RequestMapping("/agendamentos")
 public class AgendamentoResource {
     private AgendamentoBO agendamentoBO = new AgendamentoBO();
+    private PacienteBO pacienteBO = new PacienteBO();
 
     @GetMapping
     public ResponseEntity<?> listarTodos() {
@@ -32,6 +34,13 @@ public class AgendamentoResource {
         } else {
             return ResponseEntity.status(HttpStatus.NOT_FOUND).body("Nenhum agendamento encontrado.");
         }
+    }
+
+    @GetMapping("/paciente")
+    public ResponseEntity<List<AgendamentoTO>> listarDoPaciente(
+            @RequestAttribute("idPacienteAutenticado") Long idPacienteAutenticado) {
+        List<AgendamentoTO> resultado = pacienteBO.listarAgendamentos(idPacienteAutenticado, idPacienteAutenticado);
+        return ResponseEntity.status(HttpStatus.OK).body(resultado);
     }
 
     @GetMapping("/{idAgendamento}")
