@@ -124,7 +124,7 @@ A `ConnectionFactory` lê as variáveis abaixo.
 | `DB_USER` | Usuário do esquema Oracle. |
 | `DB_PASSWORD` | Senha do usuário Oracle. |
 
-Prepare o esquema com o script Oracle mantido pela equipe do projeto. A aplicação usa as tabelas abaixo.
+Consulte os [scripts Oracle](database/) para criar um esquema de referência, ajustar as credenciais de um esquema existente e verificar a estrutura esperada pelo Java. Compare o DDL de referência com o modelo relacional oficial da equipe. A aplicação usa as tabelas abaixo.
 
 | Grupo | Tabelas |
 | --- | --- |
