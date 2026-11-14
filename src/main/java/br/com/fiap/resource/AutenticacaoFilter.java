@@ -1,5 +1,7 @@
 package br.com.fiap.resource;
 
+import br.com.fiap.bo.SessaoBO;
+import br.com.fiap.bo.SessaoBO.Conta;
 import br.com.fiap.dao.ConnectionFactory;
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
@@ -23,6 +25,11 @@ import java.util.Base64;
 @Component
 @Order(2)
 public class AutenticacaoFilter extends OncePerRequestFilter {
+    private final SessaoBO sessoes;
+
+    public AutenticacaoFilter(SessaoBO sessoes) {
+        this.sessoes = sessoes;
+    }
 
     @Override
     protected void doFilterInternal(HttpServletRequest request, HttpServletResponse response,
@@ -38,30 +45,35 @@ public class AutenticacaoFilter extends OncePerRequestFilter {
             return;
         }
 
-        String[] credenciais = lerCredenciais(request.getHeader("Authorization"));
-        if (credenciais == null) {
-            responderNaoAutorizado(response);
-            return;
+        String autorizacao = request.getHeader("Authorization");
+        String token = null;
+        Conta conta;
+        if (autorizacao != null && autorizacao.regionMatches(true, 0, "Bearer ", 0, 7)) {
+            token = autorizacao.substring(7).trim();
+            conta = sessoes.consultar(token);
+        } else {
+            String[] credenciais = lerCredenciais(autorizacao);
+            conta = credenciais == null ? null : autenticar(credenciais[0], credenciais[1]);
         }
-
-        String[] conta = autenticar(credenciais[0], credenciais[1]);
         if (conta == null) {
             responderNaoAutorizado(response);
             return;
         }
 
         String perfilNecessario = perfilNecessario(caminho, request.getMethod());
-        if (perfilNecessario != null && !perfilNecessario.equals(conta[3])) {
+        if (perfilNecessario != null && !perfilNecessario.equals(conta.perfil())) {
             responderProibido(response);
             return;
         }
 
-        Long idConta = Long.valueOf(conta[0]);
+        Long idConta = conta.id();
+        request.setAttribute("contaAutenticada", conta);
+        request.setAttribute("tokenSessaoAutenticada", token);
         request.setAttribute("idContaAutenticada", idConta);
-        request.setAttribute("nomeContaAutenticada", conta[1]);
-        request.setAttribute("emailContaAutenticada", conta[2]);
-        request.setAttribute("perfilAutenticado", conta[3]);
-        if ("PACIENTE".equals(conta[3])) {
+        request.setAttribute("nomeContaAutenticada", conta.nome());
+        request.setAttribute("emailContaAutenticada", conta.email());
+        request.setAttribute("perfilAutenticado", conta.perfil());
+        if ("PACIENTE".equals(conta.perfil())) {
             request.setAttribute("idPacienteAutenticado", idConta);
         } else {
             request.setAttribute("idMembroEquipeAutenticado", idConta);
@@ -86,13 +98,13 @@ public class AutenticacaoFilter extends OncePerRequestFilter {
         }
     }
 
-    private String[] autenticar(String email, String senha) {
+    private Conta autenticar(String email, String senha) {
         Connection conexao = ConnectionFactory.getConnection();
         if (conexao == null) {
             return null;
         }
         try {
-            String[] contaPaciente = buscarConta(conexao,
+            Conta contaPaciente = buscarConta(conexao,
                     "select CD_PACIENTE, NM_PACIENTE, DS_EMAIL, DS_HASH_SENHA from tb_paciente "
                             + "where upper(DS_EMAIL) = upper(?)", email, senha, "PACIENTE");
             if (contaPaciente != null) {
@@ -110,13 +122,13 @@ public class AutenticacaoFilter extends OncePerRequestFilter {
         }
     }
 
-    private String[] buscarConta(Connection conexao, String sql, String email, String senha, String perfil)
+    private Conta buscarConta(Connection conexao, String sql, String email, String senha, String perfil)
             throws SQLException {
         try (PreparedStatement ps = conexao.prepareStatement(sql)) {
             ps.setString(1, email.trim());
             try (ResultSet rs = ps.executeQuery()) {
                 if (rs.next() && verificarSenha(senha, rs.getString("DS_HASH_SENHA"))) {
-                    return new String[]{String.valueOf(rs.getLong(1)), rs.getString(2), rs.getString(3), perfil};
+                    return new Conta(rs.getLong(1), rs.getString(2), rs.getString(3), perfil);
                 }
             }
         }
