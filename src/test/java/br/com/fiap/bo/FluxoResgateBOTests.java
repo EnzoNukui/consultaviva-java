@@ -10,6 +10,7 @@ import br.com.fiap.dao.PropostaAtendimentoDAO;
 import br.com.fiap.dao.SolicitacaoAjudaDAO;
 import br.com.fiap.exception.AcessoNegadoException;
 import br.com.fiap.exception.RegraNegocioException;
+import br.com.fiap.to.AgendarConsultaPacienteTO;
 import br.com.fiap.to.AgendamentoTO;
 import br.com.fiap.to.DisponibilidadeTO;
 import br.com.fiap.to.HistoricoEventoTO;
@@ -100,6 +101,43 @@ class FluxoResgateBOTests {
     void fecharMocks() throws Exception {
         fabrica.close();
         mocks.close();
+    }
+
+    @Test
+    void pacienteAgendaVagaDaUnidadeERegistraHistoricoNaMesmaTransacao() throws SQLException {
+        when(agendamentoDAO.inserir(eq(conexao), any(AgendamentoTO.class))).thenAnswer(chamada -> {
+            AgendamentoTO novo = chamada.getArgument(1);
+            novo.setIdAgendamento(99L);
+            return novo;
+        });
+
+        AgendamentoTO criado = agendamentoBO.agendarPeloPaciente(new AgendarConsultaPacienteTO(40L, 31L), 20L);
+
+        assertEquals(20L, criado.getIdPaciente());
+        assertEquals(31L, criado.getIdHorario());
+        assertEquals("PRESENCIAL", criado.getModalidade());
+        assertEquals("AGENDADO", criado.getStatusAgendamento());
+        InOrder ordem = inOrder(conexao, horarioDAO, agendamentoDAO, historicoDAO);
+        ordem.verify(horarioDAO).buscarPorIdParaAtualizar(conexao, 31L);
+        ordem.verify(agendamentoDAO).existeAgendamentoAtivoPorHorario(conexao, 31L, null);
+        ordem.verify(agendamentoDAO).inserir(conexao, criado);
+        ordem.verify(historicoDAO).inserir(eq(conexao), argThat(evento ->
+                "AGENDAMENTO_CRIADO".equals(evento.getTipoEvento()) && "PACIENTE".equals(evento.getTipoOrigem())));
+        ordem.verify(conexao).commit();
+    }
+
+    @Test
+    void pacienteNaoAgendaHorarioDeOutraUnidadeOuOcupado() throws SQLException {
+        assertThrows(RegraNegocioException.class, () ->
+                agendamentoBO.agendarPeloPaciente(new AgendarConsultaPacienteTO(41L, 31L), 20L));
+        when(agendamentoDAO.existeAgendamentoAtivoPorHorario(conexao, 31L, null)).thenReturn(true);
+        assertThrows(RegraNegocioException.class, () ->
+                agendamentoBO.agendarPeloPaciente(new AgendarConsultaPacienteTO(40L, 31L), 20L));
+
+        verify(agendamentoDAO, never()).inserir(any(), any());
+        verify(historicoDAO, never()).inserir(any(), any());
+        verify(conexao, never()).commit();
+        verify(conexao, times(2)).rollback();
     }
 
     @Test

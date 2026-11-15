@@ -10,6 +10,8 @@ Os arquivos desta pasta ajudam a preparar o esquema para o backend Java. A refer
 | Aproveitar o esquema que já está sendo criado | [02_ajustar_credenciais.sql](02_ajustar_credenciais.sql) | Adiciona as colunas de email e hash que estiverem faltando nas duas tabelas de contas. |
 | Popular o catálogo para uma demonstração | [03_catalogo_dificuldades_demo.sql](03_catalogo_dificuldades_demo.sql) | Insere quatro opções ilustrativas e lista os códigos gerados. Em execuções sucessivas, preserva as opções já cadastradas com o mesmo nome. |
 | Conferir o esquema do backend | [04_validar_esquema.sql](04_validar_esquema.sql) | Verifica presença de tabelas e colunas, configuração das identidades, chave composta e duplicidade de emails. |
+| Atualizar um esquema existente para os agendamentos do paciente | [05_vincular_unidade_cnes.sql](05_vincular_unidade_cnes.sql) | Acrescenta o CNES opcional às unidades antes da publicação do Java atualizado. |
+| Testar o agendamento com mais unidades | [06_agenda_demo.sql](06_agenda_demo.sql) | Adiciona quatro UBS fictícias e horários em três datas futuras. Reutiliza um profissional com atribuição de atendimento e evita horários sobrepostos. |
 
 ### Esquema já existente
 
@@ -30,5 +32,6 @@ Rode o script 01 em um esquema de desenvolvimento vazio, seguido do script 03 se
 - O esquema de referência usa um índice único por tabela em `UPPER(DS_EMAIL)`. Cada índice cobre somente sua tabela. No provisionamento manual, confira o email nas duas tabelas antes de gravar. O script 04 ajuda a identificar colisões dentro de uma tabela e entre pacientes e equipe.
 - Para demonstrar o fluxo de resgate, prepare um membro com `IN_APOIO_ADMINISTRATIVO = 'S'`, um profissional com `IN_ATENDIMENTO = 'S'`, uma unidade e horários futuros. A conversão de modalidade também exige um membro com `IN_AUTORIZA_MODALIDADE = 'S'`. Uma pessoa pode ter mais de uma atribuição.
 - Configure `DB_URL`, `DB_USER` e `DB_PASSWORD` no ambiente da aplicação. [Configuração do backend](../README.md#configuração-do-banco)
+- Para vincular uma unidade a um estabelecimento da DEMAS, informe `codigoCnes` com os sete dígitos no cadastro ou na atualização de `/unidades`. A agenda de demonstração continua sendo cadastrada no ConsultaViva.
 
 Use o modelo oficial para revisar tipos, nulabilidade, chaves estrangeiras e demais restrições. A documentação da Oracle descreve a sintaxe para colunas geradas pelo banco. [Oracle SQL Language Reference](https://docs.oracle.com/en/database/oracle/oracle-database/19/sqlrf/CREATE-TABLE.html)

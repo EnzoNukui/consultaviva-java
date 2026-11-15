@@ -3,6 +3,8 @@ package br.com.fiap.resource;
 import br.com.fiap.bo.AgendamentoBO;
 import br.com.fiap.bo.PacienteBO;
 import br.com.fiap.exception.AcessoNegadoException;
+import br.com.fiap.exception.RegraNegocioException;
+import br.com.fiap.to.AgendarConsultaPacienteTO;
 import br.com.fiap.to.AgendamentoTO;
 import jakarta.validation.Valid;
 import org.springframework.http.HttpStatus;
@@ -41,6 +43,21 @@ public class AgendamentoResource {
             @RequestAttribute("idPacienteAutenticado") Long idPacienteAutenticado) {
         List<AgendamentoTO> resultado = pacienteBO.listarAgendamentos(idPacienteAutenticado, idPacienteAutenticado);
         return ResponseEntity.status(HttpStatus.OK).body(resultado);
+    }
+
+    @PostMapping("/paciente")
+    public ResponseEntity<?> agendarPeloPaciente(@RequestBody @Valid AgendarConsultaPacienteTO dados,
+            @RequestAttribute("idPacienteAutenticado") Long idPacienteAutenticado) {
+        try {
+            AgendamentoTO resultado = agendamentoBO.agendarPeloPaciente(dados, idPacienteAutenticado);
+            if (resultado == null) {
+                return ResponseEntity.status(HttpStatus.SERVICE_UNAVAILABLE)
+                        .body("Não foi possível registrar a consulta neste horário. Confira a agenda e tente novamente.");
+            }
+            return ResponseEntity.status(HttpStatus.CREATED).body(resultado);
+        } catch (RegraNegocioException e) {
+            return ResponseEntity.status(HttpStatus.CONFLICT).body(e.getMessage());
+        }
     }
 
     @GetMapping("/{idAgendamento}")
