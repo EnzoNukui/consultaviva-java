@@ -20,7 +20,11 @@ public class UnidadeDAO {
         try (PreparedStatement ps = conexao.prepareStatement(sql);
              ResultSet rs = ps.executeQuery()) {
             while (rs.next()) {
-                registros.add(lerUnidade(rs));
+                UnidadeTO unidade = new UnidadeTO();
+                unidade.setIdUnidade(rs.getLong("CD_UNIDADE"));
+                unidade.setNomeUnidade(rs.getString("NM_UNIDADE"));
+                unidade.setEndereco(rs.getString("DS_ENDERECO"));
+                registros.add(unidade);
             }
         } catch (SQLException e) {
             System.out.println("Erro ao listar unidades: " + e.getMessage());
@@ -36,8 +40,18 @@ public class UnidadeDAO {
         if (conexao == null) {
             return null;
         }
-        try {
-            return buscarPorId(conexao, idUnidade);
+        String sql = "select * from tb_unidade where CD_UNIDADE = ?";
+        try (PreparedStatement ps = conexao.prepareStatement(sql)) {
+            ps.setLong(1, idUnidade);
+            try (ResultSet rs = ps.executeQuery()) {
+                if (rs.next()) {
+                    UnidadeTO unidade = new UnidadeTO();
+                    unidade.setIdUnidade(rs.getLong("CD_UNIDADE"));
+                    unidade.setNomeUnidade(rs.getString("NM_UNIDADE"));
+                    unidade.setEndereco(rs.getString("DS_ENDERECO"));
+                    return unidade;
+                }
+            }
         } catch (SQLException e) {
             System.out.println("Erro ao buscar unidade: " + e.getMessage());
         } finally {
@@ -46,34 +60,16 @@ public class UnidadeDAO {
         return null;
     }
 
-    private UnidadeTO buscarPorId(Connection conexao, Long idUnidade) throws SQLException {
-        String sql = "select * from tb_unidade where CD_UNIDADE = ?";
-        try (PreparedStatement ps = conexao.prepareStatement(sql)) {
-            ps.setLong(1, idUnidade);
-            try (ResultSet rs = ps.executeQuery()) {
-                return rs.next() ? lerUnidade(rs) : null;
-            }
-        }
-    }
-
-    private UnidadeTO lerUnidade(ResultSet rs) throws SQLException {
-        UnidadeTO unidade = new UnidadeTO(rs.getLong("CD_UNIDADE"),
-                rs.getString("NM_UNIDADE"), rs.getString("DS_ENDERECO"));
-        unidade.setCodigoCnes(rs.getString("CD_CNES"));
-        return unidade;
-    }
-
     public UnidadeTO inserir(UnidadeTO unidade) {
         Connection conexao = ConnectionFactory.getConnection();
         if (conexao == null) {
             return null;
         }
-        String sql = "insert into tb_unidade (NM_UNIDADE, DS_ENDERECO, CD_CNES) values (?, ?, ?)";
+        String sql = "insert into tb_unidade (NM_UNIDADE, DS_ENDERECO) values (?, ?)";
         // A coluna identity é omitida do INSERT e solicitada explicitamente ao driver Oracle.
         try (PreparedStatement ps = conexao.prepareStatement(sql, new String[]{"CD_UNIDADE"})) {
             ps.setString(1, unidade.getNomeUnidade());
             ps.setString(2, unidade.getEndereco());
-            ps.setString(3, unidade.getCodigoCnes());
             if (ps.executeUpdate() == 0) {
                 return null;
             }
@@ -103,15 +99,12 @@ public class UnidadeDAO {
         if (conexao == null) {
             return null;
         }
-        String sql = "update tb_unidade set NM_UNIDADE = ?, DS_ENDERECO = ?, CD_CNES = COALESCE(?, CD_CNES) "
-                + "where CD_UNIDADE = ?";
+        String sql = "update tb_unidade set NM_UNIDADE = ?, DS_ENDERECO = ? where CD_UNIDADE = ?";
         try (PreparedStatement ps = conexao.prepareStatement(sql)) {
             ps.setString(1, unidade.getNomeUnidade());
             ps.setString(2, unidade.getEndereco());
-            ps.setString(3, unidade.getCodigoCnes());
-            ps.setLong(4, unidade.getIdUnidade());
-            if (ps.executeUpdate() == 0) return null;
-            return unidade.getCodigoCnes() == null ? buscarPorId(conexao, unidade.getIdUnidade()) : unidade;
+            ps.setLong(3, unidade.getIdUnidade());
+            return ps.executeUpdate() > 0 ? unidade : null;
         } catch (SQLException e) {
             System.out.println("Erro ao atualizar unidade: " + e.getMessage());
             return null;

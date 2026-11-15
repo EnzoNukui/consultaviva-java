@@ -51,10 +51,7 @@ CREATE TABLE tb_unidade (
     cd_unidade  NUMBER(18) GENERATED ALWAYS AS IDENTITY,
     nm_unidade  VARCHAR2(100 CHAR) NOT NULL,
     ds_endereco VARCHAR2(250 CHAR) NOT NULL,
-    cd_cnes     VARCHAR2(7 CHAR),
-    CONSTRAINT pk_unidade PRIMARY KEY (cd_unidade),
-    CONSTRAINT uq_unidade_cnes UNIQUE (cd_cnes),
-    CONSTRAINT ck_unidade_cnes CHECK (REGEXP_LIKE(cd_cnes, '^[0-9]{7}$'))
+    CONSTRAINT pk_unidade PRIMARY KEY (cd_unidade)
 );
 
 CREATE TABLE tb_tipo_dificuldade (

@@ -14,9 +14,6 @@ public class UnidadeTO {
     @Size(max = 250)
     private String endereco;
 
-    @Size(min = 7, max = 7)
-    private String codigoCnes;
-
     public UnidadeTO() {
     }
 
@@ -48,14 +45,6 @@ public class UnidadeTO {
 
     public void setEndereco(String endereco) {
         this.endereco = endereco;
-    }
-
-    public String getCodigoCnes() {
-        return codigoCnes;
-    }
-
-    public void setCodigoCnes(String codigoCnes) {
-        this.codigoCnes = codigoCnes;
     }
 }
 
