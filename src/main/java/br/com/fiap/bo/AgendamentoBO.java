@@ -9,6 +9,7 @@ import br.com.fiap.dao.PropostaAtendimentoDAO;
 import br.com.fiap.dao.SolicitacaoAjudaDAO;
 import br.com.fiap.exception.AcessoNegadoException;
 import br.com.fiap.exception.RegraNegocioException;
+import br.com.fiap.to.AgendarConsultaPacienteTO;
 import br.com.fiap.to.AgendamentoTO;
 import br.com.fiap.to.HistoricoEventoTO;
 import br.com.fiap.to.HorarioAtendimentoTO;
@@ -60,15 +61,31 @@ public class AgendamentoBO {
             throw new RegraNegocioException("A modalidade do agendamento é inválida.");
         }
 
+        return criarAgendamento(dados.getIdPaciente(), dados.getIdHorario(), null, dados.getModalidade(), idMembroEquipe);
+    }
+
+    public AgendamentoTO agendarPeloPaciente(AgendarConsultaPacienteTO dados, Long idPacienteAutenticado) {
+        if (!idValido(idPacienteAutenticado)) {
+            throw new AcessoNegadoException("A operação exige uma conta de paciente.");
+        }
+        return criarAgendamento(idPacienteAutenticado, dados.idHorario(), dados.idUnidade(), "PRESENCIAL", null);
+    }
+
+    private AgendamentoTO criarAgendamento(Long idPaciente, Long idHorario, Long idUnidade,
+                                           String modalidade, Long idMembroEquipe) {
         return TransacaoJdbc.executar(conexao -> {
-            if (!validarVaga(conexao, dados.getIdHorario(), null)) {
+            HorarioAtendimentoTO horario = validarVaga(conexao, idHorario, null);
+            if (horario == null) {
                 return null;
             }
-            AgendamentoTO agendamento = new AgendamentoTO(null, dados.getModalidade(), "AGENDADO",
-                    "SEM_RESPOSTA", dados.getIdPaciente(), dados.getIdHorario());
+            if (idUnidade != null && !idUnidade.equals(horario.getIdUnidade())) {
+                throw new RegraNegocioException("O horário não pertence à unidade selecionada.");
+            }
+            AgendamentoTO agendamento = new AgendamentoTO(null, modalidade, "AGENDADO",
+                    "SEM_RESPOSTA", idPaciente, idHorario);
             agendamento = agendamentoDAO.inserir(conexao, agendamento);
             if (agendamento == null || !registrarHistorico(conexao, agendamento, "AGENDAMENTO_CRIADO",
-                    "Agendamento experimental cadastrado.", "EQUIPE", idMembroEquipe)) {
+                    "Agendamento experimental cadastrado.", idMembroEquipe == null ? "PACIENTE" : "EQUIPE", idMembroEquipe)) {
                 return null;
             }
             return agendamento;
@@ -100,7 +117,7 @@ public class AgendamentoBO {
             if (solicitacaoDAO.existeSolicitacaoAtivaPorAgendamento(conexao, atual.getIdAgendamento(), null)) {
                 throw new RegraNegocioException("Conclua a solicitação de ajuda antes de remarcar diretamente.");
             }
-            if (!validarVaga(conexao, dados.getIdHorario(), atual.getIdAgendamento())) {
+            if (validarVaga(conexao, dados.getIdHorario(), atual.getIdAgendamento()) == null) {
                 return null;
             }
             atual.setIdHorario(dados.getIdHorario());
@@ -210,14 +227,14 @@ public class AgendamentoBO {
         });
     }
 
-    private boolean validarVaga(Connection conexao, Long idHorario, Long idAgendamentoIgnorado) {
+    private HorarioAtendimentoTO validarVaga(Connection conexao, Long idHorario, Long idAgendamentoIgnorado) {
         HorarioAtendimentoTO horario = horarioDAO.buscarPorIdParaAtualizar(conexao, idHorario);
         if (horario == null) {
-            return false;
+            return null;
         }
         MembroEquipeTO profissional = membroEquipeDAO.buscarPorIdParaAtualizar(conexao, horario.getIdMembroEquipe());
         if (profissional == null) {
-            return false;
+            return null;
         }
         LocalDateTime instante = agora();
         if (!horario.getDataInicio().isAfter(instante) || !"S".equals(profissional.getAtendimento())) {
@@ -230,7 +247,7 @@ public class AgendamentoBO {
         if (Boolean.TRUE.equals(reserva)) {
             throw new RegraNegocioException("O horário está reservado para uma proposta.");
         }
-        return reserva != null;
+        return reserva == null ? null : horario;
     }
 
     private boolean registrarHistorico(Connection conexao, AgendamentoTO agendamento, String tipo,
