@@ -7,15 +7,18 @@ API REST do ConsultaViva, desenvolvida para a Global Solution FIAP 2026. O servi
   ·
   <a href="https://github.com/EnzoNukui/consultaviva-java">Repositório</a>
   ·
+  <a href="https://youtu.be/FydMtukGNR0">Vídeo de apresentação</a>
+  ·
   <a href="#executar-localmente">Execução local</a>
   ·
   <a href="#referência-da-api">Endpoints</a>
 </p>
 
-> **Status da publicação.** O serviço está publicado no Render. As funcionalidades que dependem do Oracle ainda aguardam a conclusão e a configuração do banco de dados.
+> **Status da publicação.** O serviço está publicado no Render. As operações de cadastro, autenticação e agenda dependem do Oracle e das variáveis de conexão configuradas no ambiente.
 
 ## Índice
 
+- [Integrantes](#integrantes)
 - [Visão geral](#visão-geral)
 - [Tecnologias e organização](#tecnologias-e-organização)
 - [Executar localmente](#executar-localmente)
@@ -28,6 +31,18 @@ API REST do ConsultaViva, desenvolvida para a Global Solution FIAP 2026. O servi
 - [Modelos e validações](#modelos-e-validações)
 - [Exemplos de requisição](#exemplos-de-requisição)
 - [Respostas HTTP](#respostas-http)
+
+## Integrantes
+
+| Integrante | RM | Turma |
+| --- | --- | --- |
+| Arthur Carvalho Brito Martins | 572325 | 1TDSPO |
+| Diego Soares Trujillo | 570147 | 1TDSPH |
+| Eduardo Damasio Guelere | 569960 | 1TDSPH |
+| Enzo Nukui da Silva | 569770 | 1TDSPH |
+| Letícia Cardoso de Almeida | 569415 | 1TDSPH |
+
+O [vídeo de apresentação](https://youtu.be/FydMtukGNR0) demonstra o ConsultaViva. A API está publicada em [consultaviva-java.onrender.com](https://consultaviva-java.onrender.com).
 
 ## Visão geral
 
@@ -105,7 +120,7 @@ O [Dockerfile](Dockerfile) compila o projeto dentro da imagem e executa `consult
 
 ## Publicação no Render
 
-O serviço está publicado em [consultaviva-java.onrender.com](https://consultaviva-java.onrender.com). Use esse endereço como URL base no Postman. O cadastro, a autenticação e as rotas que consultam ou gravam dados dependem do esquema Oracle, que ainda está em preparação.
+O serviço está publicado em [consultaviva-java.onrender.com](https://consultaviva-java.onrender.com). Use esse endereço como URL base no Postman. O cadastro, a autenticação e as rotas que consultam ou gravam dados dependem do esquema Oracle e das credenciais configuradas no serviço.
 
 Para reproduzir a publicação em outro ambiente, siga as etapas abaixo.
 
@@ -137,7 +152,9 @@ Os IDs das entidades são gerados pelo Oracle com `GENERATED ALWAYS AS IDENTITY`
 
 ## Autenticação e permissões
 
-A API usa **HTTP Basic**. Envie o email da conta como usuário e a senha no cabeçalho `Authorization` de cada requisição autenticada. No Postman, selecione **Basic Auth** na aba **Authorization** e preencha os dois campos. Em ambiente publicado, use HTTPS.
+A API aceita **HTTP Basic** e sessões com token opaco. Para usar Basic no Postman, selecione **Basic Auth** na aba **Authorization** e informe email e senha. Para iniciar uma sessão, envie essas credenciais por Basic a `POST /autenticacao/sessao` e use o token retornado em `Authorization: Bearer <token>`. Em ambiente publicado, use HTTPS.
+
+As sessões duram oito horas e ficam em memória. `GET /autenticacao/me` retorna o perfil e o primeiro nome da conta autenticada. `DELETE /autenticacao/sessao` encerra a sessão. Reiniciar a aplicação exige novo login.
 
 | Perfil | Acesso |
 | --- | --- |
@@ -159,6 +176,14 @@ As atribuições `atendimento`, `apoioAdministrativo` e `autorizaModalidade` sã
 | Render | [https://consultaviva-java.onrender.com](https://consultaviva-java.onrender.com) |
 
 Os caminhos abaixo são relativos ao endereço base. **Ambos** indica que a rota exige autenticação e aceita paciente ou equipe.
+
+### Autenticação
+
+| Método | Caminho | Acesso | Operação |
+| --- | --- | --- | --- |
+| GET | `/autenticacao/me` | Ambos | Consulta o perfil e o primeiro nome da conta. |
+| POST | `/autenticacao/sessao` | HTTP Basic | Inicia uma sessão e retorna perfil, primeiro nome e token. |
+| DELETE | `/autenticacao/sessao` | Bearer | Encerra a sessão e retorna `204`. |
 
 ### Pacientes
 
@@ -206,6 +231,7 @@ Os caminhos abaixo são relativos ao endereço base. **Ambos** indica que a rota
 | --- | --- | --- | --- |
 | GET | `/agendamentos` | Equipe | Lista agendamentos. |
 | GET | `/agendamentos/paciente` | Paciente | Lista todos os agendamentos do paciente autenticado. Retorna `[]` quando não há registros. |
+| POST | `/agendamentos/paciente` | Paciente | Agenda uma consulta presencial com `idUnidade` e `idHorario`. O paciente é identificado pela autenticação. |
 | GET | `/agendamentos/{idAgendamento}` | Equipe | Consulta um agendamento. |
 | GET | `/agendamentos/{idAgendamento}/paciente` | Paciente | Consulta um agendamento próprio. |
 | POST | `/agendamentos` | Equipe | Agenda um atendimento para um paciente. |
@@ -275,7 +301,7 @@ Para montar a lista de próximas consultas, use `GET /agendamentos/paciente` e c
 
 ## Fluxo de resgate
 
-1. A **equipe** cadastra o agendamento em um horário disponível. O backend inicia o registro com `AGENDADO` e `SEM_RESPOSTA`.
+1. A **equipe** cadastra o agendamento em um horário disponível. O **paciente** também pode marcar uma consulta presencial pela sua rota de agendamento. O backend inicia o registro com `AGENDADO` e `SEM_RESPOSTA`.
 2. O **paciente** pode responder `PRECISO_DE_AJUDA` e abrir uma solicitação para o agendamento. A criação grava a solicitação, os intervalos, as dificuldades selecionadas e o evento inicial na mesma transação.
 3. A **equipe com apoio administrativo** inicia a análise e gera propostas. A busca considera horários da mesma unidade e do mesmo profissional, a disponibilidade declarada pelo paciente, a modalidade e a ocupação. A geração retorna uma lista vazia quando não há alternativa compatível.
 4. A **equipe** oferta a alternativa escolhida. Se houver conversão de modalidade, um membro com `autorizaModalidade=S` precisa autorizá-la antes da oferta.
@@ -295,6 +321,7 @@ Os campos JSON usam `camelCase`. Use `AAAA-MM-DD` para datas e `AAAA-MM-DDTHH:mm
 | Cadastro de membro | `nomeMembroEquipe`, `cargo`, `atendimento`, `apoioAdministrativo` e `autorizaModalidade`. `registroProfissional` é opcional. |
 | Cadastro de horário | `dataInicio`, `dataFim`, `idUnidade` e `idMembroEquipe`. O fim deve ser posterior ao início e os horários do profissional não podem se sobrepor. |
 | Agendamento e remarcação | Para criar, envie `modalidade` (`PRESENCIAL` ou `VIRTUAL`), `idPaciente` e `idHorario`. Para remarcar, envie o novo `idHorario` no corpo. |
+| Agendamento pelo paciente | `idUnidade` e `idHorario` são obrigatórios e positivos. O horário deve pertencer à unidade selecionada e estar disponível. |
 | Solicitação de ajuda | `idAgendamento` e pelo menos uma entrada em `disponibilidades`. `relato` tem até 500 caracteres e `idsDificuldade` é opcional. O BO define a data de abertura e o status. |
 | Disponibilidade | `dataInicio`, `dataFim` e `modalidade` (`PRESENCIAL`, `VIRTUAL` ou `AMBAS`). O fim deve ser posterior ao início. Nas rotas aninhadas, o ID da solicitação vem do caminho. |
 | Plano de comparecimento | `origemTrajeto`, `destinoTrajeto`, `meioTransporte`, `duracaoMinutos` positiva e `margemMinutos` não negativa. Na criação, envie `idAgendamento` e, se aplicável, `idProposta`. |
