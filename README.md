@@ -3,14 +3,20 @@
 API REST do ConsultaViva, desenvolvida para a Global Solution FIAP 2026. O serviço acompanha consultas agendadas, permite que pacientes sinalizem dificuldades para comparecer e dá à equipe um fluxo para analisar e oferecer alternativas de atendimento.
 
 <p align="center">
-  <a href="https://consultaviva-java.onrender.com">API publicada</a>
-  ·
-  <a href="https://github.com/EnzoNukui/consultaviva-java">Repositório</a>
-  ·
-  <a href="https://youtu.be/FydMtukGNR0">Vídeo de apresentação</a>
-  ·
+  <a href="https://consultaviva-java.onrender.com">
+    <img src="https://img.shields.io/badge/Render-Acessar_API-0B6E69?style=for-the-badge&amp;logo=render&amp;logoColor=white" alt="Acessar a API do ConsultaViva no Render" />
+  </a>
+  &nbsp;
+  <a href="https://youtu.be/FydMtukGNR0">
+    <img src="https://img.shields.io/badge/YouTube-Assistir_apresenta%C3%A7%C3%A3o-D22F32?style=for-the-badge&amp;logo=youtube&amp;logoColor=white" alt="Assistir à apresentação do ConsultaViva no YouTube" />
+  </a>
+</p>
+
+<p align="center">
+  <a href="https://github.com/EnzoNukui/consultaviva-java">Código-fonte</a>
+  &nbsp; · &nbsp;
   <a href="#executar-localmente">Execução local</a>
-  ·
+  &nbsp; · &nbsp;
   <a href="#referência-da-api">Endpoints</a>
 </p>
 
@@ -41,8 +47,6 @@ API REST do ConsultaViva, desenvolvida para a Global Solution FIAP 2026. O servi
 | Eduardo Damasio Guelere | 569960 | 1TDSPH |
 | Enzo Nukui da Silva | 569770 | 1TDSPH |
 | Letícia Cardoso de Almeida | 569415 | 1TDSPH |
-
-O [vídeo de apresentação](https://youtu.be/FydMtukGNR0) demonstra o ConsultaViva. A API está publicada em [consultaviva-java.onrender.com](https://consultaviva-java.onrender.com).
 
 ## Visão geral
 
